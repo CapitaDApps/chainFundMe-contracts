@@ -980,23 +980,10 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
       expect(funders[1].funderAddress).to.equal(user2.address);
       expect(funders[1].tokenAddress).to.equal(ethers.ZeroAddress);
       expect(funders[1].amount).to.equal(parseEther("1"));
-
-      // Gas Efficiency Audit
-      // Audit Note: Looping over fundersCount is gas-intensive for many funders. Consider pagination or off-chain aggregation.
     });
   });
 
   describe("Security Checks", function () {
-    it("should prevent reentrancy in withdrawETH", async function () {
-      // Audit Note: withdrawETH uses call with no external calls, so reentrancy risk is low.
-      // Suggestion: Add nonReentrant modifier for future-proofing.
-    });
-
-    it("should prevent reentrancy in withdrawOtherTokens", async function () {
-      // Audit Note: Token transfers are external but use standard ERC20. Risk is low unless tokens are malicious.
-      // Suggestion: Use OpenZeppelin's ReentrancyGuard for extra safety.
-    });
-
     it("should ensure only factory can call sensitive functions", async function () {
       await time.increaseTo(endTime + 1);
       await expect(
@@ -1005,16 +992,6 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
       await expect(
         chainFundMe.connect(user1).approveWithdraw()
       ).to.be.revertedWithCustomError(chainFundMe, "ChainFundMe__NotFactory");
-    });
-
-    it("should handle malicious tokens in withdrawOtherTokens", async function () {
-      // Tested in withdrawOtherTokens with failing token
-      // Audit Note: Failed transfers are logged, but consider skipping zero-balance tokens to save gas.
-    });
-
-    it("should prevent timestamp manipulation", async function () {
-      // Audit Note: startTime and endTime checks are robust, but miners can manipulate slightly.
-      // Suggestion: Use block.number for critical timing if precision is needed.
     });
   });
 });
