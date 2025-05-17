@@ -6,7 +6,7 @@ export default buildModule("CapitaPoints", (m) => {
   const net = network.name as Networks;
   const priceFeedAddress = networks[net].priceFeedAddress;
 
-  const capitaFactoryData = getDeployedAddress(net, "capita-factory");
+  const capitaFactoryData = getDeployedAddress(net, "capita-factory-mainnet");
 
   if (!capitaFactoryData) {
     throw new Error("CapitaFundingFactory not found");

@@ -3,8 +3,8 @@ import { getDeployedAddress, Networks } from "../lib/config";
 
 async function main() {
   const net = network.name as Networks;
-  const capitaPointsData = getDeployedAddress(net, "capita-points");
-  const capitaFactoryData = getDeployedAddress(net, "capita-factory");
+  const capitaPointsData = getDeployedAddress(net, "capita-points-mainnet");
+  const capitaFactoryData = getDeployedAddress(net, "capita-factory-mainnet");
 
   if (!capitaPointsData) {
     console.error("CapitaPoints not found");

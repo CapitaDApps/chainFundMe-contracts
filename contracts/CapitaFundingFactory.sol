@@ -46,7 +46,7 @@ contract CapitaFundingFactory is AccessControl {
 
     CapitaPoints public capitaPoints;
 
-    mapping(uint256 => address) private indexToDeployedCampaigns; // Maps campaign ID to contract address
+    mapping(uint256 => address) public indexToDeployedCampaigns; // Maps campaign ID to contract address
     mapping(address => bool) public moderators;
     mapping(address => address[]) private userCampaigns; // Tracks each user's chainFundMe contracts
     mapping(address => bool) public otherAcceptedTokensAddresses;

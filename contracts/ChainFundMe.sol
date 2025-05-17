@@ -6,7 +6,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ICapitaFundingFactory} from "./interfaces/ICapitaFundingFactory.sol";
 import {PriceFeed} from "./lib/PriceFeed.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import "hardhat/console.sol";
 
 contract ChainFundMe is Initializable {
     using PriceFeed for uint256;

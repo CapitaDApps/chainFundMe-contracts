@@ -3,14 +3,15 @@ import { getDeployedAddress, Networks } from "../lib/config";
 
 async function main() {
   const net = network.name as Networks;
-  const capitaFactory = getDeployedAddress(net, "capita-factory");
+  const capitaFactory = getDeployedAddress(net, "capita-factory-mainnet");
 
   const [owner] = await ethers.getSigners();
 
+  if (!capitaFactory) throw new Error("No factory found");
+
   const CapitaFundingFactory = await ethers.getContractAt(
     "CapitaFundingFactory",
-    capitaFactory["CapitaFundingFactory#CapitaFundingFactory"] ||
-      "0xC68D3D8c1822Be5062cb80aE166962D7F15f32DF",
+    capitaFactory["CapitaFundingFactory#CapitaFundingFactory"],
     owner
   );
 

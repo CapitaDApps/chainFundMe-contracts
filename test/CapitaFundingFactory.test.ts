@@ -475,13 +475,3 @@ describe("CapitaFundingFactory Contract", function () {
     });
   });
 });
-
-// Improvement Suggestions:
-// 3. Add maximum array length checks for batch operations (e.g., batchWithdrawApproval, batchApproveFunding).
-// 4. Allow updating feeWalletAddress with admin approval even after capitaPoints is set.
-// 5. Consider batch operations for setAcceptableToken to reduce gas for multiple tokens.
-
-// Vulnerability Notes:
-// - Ensure ChainFundMe validates factory address to prevent fake factories.
-// - Validate _toAddress in withdraw functions to prevent zero address or malicious contracts.
-// - CapitaPointsAlreadySet restriction in updateFeeWalletAddress may be too restrictive; consider a more flexible admin override.
