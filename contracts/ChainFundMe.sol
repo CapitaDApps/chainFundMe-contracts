@@ -31,7 +31,6 @@ contract ChainFundMe is Initializable {
     error ChainFundMe__InvalidAmount();
     error ChainFundMe__FundingNotApproved();
     error ChainFundMe__FundingDisapproved();
-    error ChainFundMe__FundingLimitExceeded();
 
     /*//////////////////////////////////////////////////////////////
                                 STRUCTS
@@ -130,6 +129,11 @@ contract ChainFundMe is Initializable {
         _;
     }
 
+    modifier isNotPaused() {
+        if (isPaused) revert ChainFundMe__FundingPaused();
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -168,41 +172,18 @@ contract ChainFundMe is Initializable {
         address _anotherToken,
         uint256 _amount,
         address _contributor
-    ) external payable campaignStarted campaignNotOver onlyFactory {
+    ) external payable campaignStarted campaignNotOver onlyFactory isNotPaused {
         ICapitaFundingFactory capitaFundingFactory = ICapitaFundingFactory(
             fundingFactoryAddress
         );
         uint8 platformFee = capitaFundingFactory.platformFee();
         address feeWallet = capitaFundingFactory.feeWalletAddress();
-        bool verified = capitaFundingFactory.verifiedCreators(owner);
-
-        if (isPaused) revert ChainFundMe__FundingPaused();
 
         bool limitsEnabled = getLimitsEnabled();
 
         if (limitsEnabled) {
             if (!fundingApproved) revert ChainFundMe__FundingNotApproved();
             if (fundingDisapproved) revert ChainFundMe__FundingDisapproved();
-        }
-
-        if (!verified) {
-            address priceFeedAddress = capitaFundingFactory.priceFeedAddress();
-            uint256 unverifiedFundLimit = capitaFundingFactory
-                .unverifiedFundLimit();
-            uint256 usdcBalance = IERC20(stableCoinAddress).balanceOf(
-                address(this)
-            ) * 1e12; // convert balance from 6 decimals to 18
-            uint256 ethToUsdBalance = address(this).balance.ethToUsd(
-                AggregatorV3Interface(priceFeedAddress)
-            );
-
-            if (_anotherToken != address(0)) {
-                usdcBalance += _amount * 1e12; // convert balance from 6 decimals to 18;
-            }
-
-            uint256 totalCurrentlyFunded = ethToUsdBalance + usdcBalance;
-            if (totalCurrentlyFunded > unverifiedFundLimit)
-                revert ChainFundMe__FundingLimitExceeded();
         }
 
         address tokenUsedForFunding;
@@ -280,7 +261,7 @@ contract ChainFundMe is Initializable {
         emit ApprovalRevoked(_approvalRevoked);
     }
 
-    function withdrawETH() external onlyFactory {
+    function withdrawETH() external onlyFactory isNotPaused {
         bool limitsEnabled = getLimitsEnabled();
         if (limitsEnabled) {
             if (!isWithdrawApproved || withdrawalApprovalRevoked)
@@ -294,7 +275,7 @@ contract ChainFundMe is Initializable {
         emit WithdrawnETH(owner, balance);
     }
 
-    function withdrawOtherTokens() external onlyFactory {
+    function withdrawOtherTokens() external onlyFactory isNotPaused {
         bool limitsEnabled = getLimitsEnabled();
         if (limitsEnabled) {
             if (!isWithdrawApproved || withdrawalApprovalRevoked)

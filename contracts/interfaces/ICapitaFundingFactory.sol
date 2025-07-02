@@ -65,8 +65,6 @@ interface ICapitaFundingFactory {
 
     function priceFeedAddress() external view returns (address);
 
-    function unverifiedFundLimit() external view returns (uint256);
-
     /*//////////////////////////////////////////////////////////////
                             MUTATIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -94,6 +92,10 @@ interface ICapitaFundingFactory {
     function updateCapitaTokenAddress(address _capitaTokenAddress) external;
 
     function addModerator(address _moderator) external;
+
+    function deleteCampaignByIndex(uint256 index) external;
+
+    function deleteCampaignByAddress(address _campaignAddress) external;
 
     function chainFundMe_fundChainFundMe(
         address _campaignAddress,
@@ -133,13 +135,9 @@ interface ICapitaFundingFactory {
         bool _disapproved
     ) external;
 
-    function chainFundMe_withdrawETH(
-        address _campaignAddress,
-        address _toAddress
-    ) external;
+    function chainFundMe_withdrawAllFunds(address _campaignAddress) external;
 
-    function chainFundMe__withdrawTokens(
-        address _campaignAddress,
-        address _toAddress
-    ) external;
+    function chainFundMe_withdrawETH(address _campaignAddress) external;
+
+    function chainFundMe__withdrawTokens(address _campaignAddress) external;
 }

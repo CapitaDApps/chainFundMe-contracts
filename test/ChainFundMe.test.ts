@@ -207,6 +207,7 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
       await factory
         .connect(moderator)
         .chainFundMe_approveFunding(chainFundMe.target);
+      await factory.connect(moderator).updateLimitsEnabled(true);
     });
 
     it("should mint correct amount of points on approving created chainFundMe", async () => {
@@ -215,51 +216,6 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
         campaignOwner.address
       );
       expect(pointsEarned).to.be.equal(basePoints);
-    });
-
-    it("should enforce funding limit for unverified creator", async () => {
-      const startTime = (await time.latest()) + 3600; // 1 hour from now
-      const endTime = startTime + 86400; // 1 day duration
-      const newChainFundMeTx = await factory.connect(user2).createChainFundMe(
-        startTime,
-        endTime,
-        "", // uri
-        [] // other tokens
-      );
-      const receipt = await newChainFundMeTx.wait();
-      await time.increaseTo(startTime);
-      const newChainFundMeAddress = (receipt.logs[1] as { args: string[] })
-        .args[1];
-
-      await factory.chainFundMe_approveFunding(newChainFundMeAddress);
-      await factory
-        .connect(user1)
-        .chainFundMe_fundChainFundMe(
-          newChainFundMeAddress,
-          ethers.ZeroAddress,
-          ethers.parseEther("10"),
-          { value: ethers.parseEther("10") }
-        );
-      const usdcAmount = ethers.parseUnits("35000", 6);
-      await stableCoin
-        .connect(user1)
-        .approve(newChainFundMeAddress, usdcAmount);
-      const usdcDeposit = factory
-        .connect(user1)
-        .chainFundMe_fundChainFundMe(
-          newChainFundMeAddress,
-          stableCoin.target,
-          usdcAmount
-        );
-
-      const chainFundMe = await ethers.getContractAt(
-        "ChainFundMe",
-        newChainFundMeAddress
-      );
-      await expect(usdcDeposit).to.be.revertedWithCustomError(
-        chainFundMe,
-        "ChainFundMe__FundingLimitExceeded"
-      );
     });
 
     it("should allow ETH deposit through factory", async function () {
@@ -532,6 +488,7 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
 
   describe("withdrawETH", function () {
     beforeEach(async function () {
+      await factory.connect(moderator).updateLimitsEnabled(true);
       await factory
         .connect(moderator)
         .chainFundMe_approveFunding(chainFundMe.target);
@@ -593,12 +550,16 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
     it("should revert if called by non-campaign owner", async function () {
       await expect(
         factory.connect(nonOwner).chainFundMe_withdrawETH(chainFundMe.target)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(
+        factory,
+        "CapitaFundingFactory__OnlyOwner"
+      );
     });
   });
 
   describe("withdrawOtherTokens", function () {
     beforeEach(async function () {
+      await factory.connect(moderator).updateLimitsEnabled(true);
       await factory
         .connect(moderator)
         .chainFundMe_approveFunding(chainFundMe.target);
@@ -716,7 +677,10 @@ describe("ChainFundMe via CapitaFundingFactory", function () {
     it("should revert if called by non-campaign owner", async function () {
       await expect(
         factory.connect(nonOwner).chainFundMe_withdrawTokens(chainFundMe.target)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(
+        factory,
+        "CapitaFundingFactory__OnlyOwner"
+      );
     });
   });
 

@@ -106,7 +106,7 @@ describe("CapitaFundingFactory Contract", function () {
     it("should revert if called by non-owner", async function () {
       await expect(
         factory.connect(user1).addModerator(moderator.address)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
@@ -125,7 +125,7 @@ describe("CapitaFundingFactory Contract", function () {
     it("should revert if called by non-owner", async function () {
       await expect(
         factory.connect(user1).removeModerator(moderator.address)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
@@ -146,7 +146,7 @@ describe("CapitaFundingFactory Contract", function () {
         factory
           .connect(user1)
           .setCapitaPointsAddress(ethers.Wallet.createRandom().address)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
@@ -164,7 +164,7 @@ describe("CapitaFundingFactory Contract", function () {
     it("should revert if called by non-owner", async function () {
       await expect(
         factory.connect(user1).updatePaused(true)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
@@ -177,19 +177,47 @@ describe("CapitaFundingFactory Contract", function () {
       await factory.verifyCreator(user1.address, true);
     });
 
-    it("should not allow unverified users create campaign with other tokens", async function () {
+    it("should not allow creation with unaccepted token", async function () {
       const startTime = (await time.latest()) + 3600; // 1 hour from now
       const endTime = startTime + 86400; // 1 day duration
       const metadataUri = "ipfs://example";
-      const otherTokens = [ethers.Wallet.createRandom().address];
+      const randToken = ethers.Wallet.createRandom().address;
+      const otherTokens = [randToken];
       const tx = factory
         .connect(user2)
         .createChainFundMe(startTime, endTime, metadataUri, otherTokens);
 
-      await expect(tx).to.be.revertedWithCustomError(
-        factory,
-        "CapitaFundingFactory__UnverifiedUser"
-      );
+      await expect(tx)
+        .to.be.revertedWithCustomError(
+          factory,
+          "CapitaFundingFactory__TokenNotAllowed"
+        )
+        .withArgs(randToken);
+    });
+
+    it("should allow creation with accepted token", async function () {
+      const startTime = (await time.latest()) + 3600; // 1 hour from now
+      const endTime = startTime + 86400; // 1 day duration
+      const metadataUri = "ipfs://example";
+      const randToken = ethers.Wallet.createRandom().address;
+      const otherTokens = [randToken];
+
+      await factory.setAcceptableToken(randToken);
+      const tx = await factory
+        .connect(user2)
+        .createChainFundMe(startTime, endTime, metadataUri, otherTokens);
+
+      const campaigns = await factory.getDeployedCampaigns();
+      expect(campaigns).to.have.lengthOf(1);
+      expect(campaigns[0]).to.be.properAddress;
+
+      const userCampaigns = await factory.getUserCampaigns(user2.address);
+      expect(userCampaigns).to.have.lengthOf(1);
+      expect(userCampaigns[0]).to.equal(campaigns[0]);
+
+      await expect(tx)
+        .to.emit(factory, "ChainFundMeCreated")
+        .withArgs(user2.address, campaigns[0]);
     });
 
     it("should create a new ChainFundMe campaign", async function () {
@@ -369,7 +397,7 @@ describe("CapitaFundingFactory Contract", function () {
         factory
           .connect(user1)
           .setAcceptableToken(ethers.Wallet.createRandom().address)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
@@ -390,7 +418,7 @@ describe("CapitaFundingFactory Contract", function () {
         factory
           .connect(user1)
           .removeTokenAddress(ethers.Wallet.createRandom().address)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
@@ -422,12 +450,12 @@ describe("CapitaFundingFactory Contract", function () {
     it("should revert if called by non-owner", async function () {
       await expect(
         factory.connect(user1).updatePlatformFee(10)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
     });
   });
 
   describe("updateFeeWalletAddress", function () {
-    it("should allow owner to update fee wallet address if capitaPoints not set", async function () {
+    it("should allow owner to update fee wallet address", async function () {
       const newFeeWallet = ethers.Wallet.createRandom().address;
       const tx = await factory
         .connect(owner)
@@ -438,17 +466,12 @@ describe("CapitaFundingFactory Contract", function () {
         .withArgs(newFeeWallet);
     });
 
-    it("should revert if capitaPoints is set", async function () {
-      await factory
-        .connect(owner)
-        .setCapitaPointsAddress(await capitaPoints.getAddress());
+    it("should revert if address is 0", async function () {
       await expect(
-        factory
-          .connect(owner)
-          .updateFeeWalletAddress(ethers.Wallet.createRandom().address)
+        factory.connect(owner).updateFeeWalletAddress(ethers.ZeroAddress)
       ).to.be.revertedWithCustomError(
         factory,
-        "CapitaFundingFactory__CapitaPointsAlreadySet"
+        "CapitaFundingFactory__InvalidAddress"
       );
     });
 
@@ -457,7 +480,57 @@ describe("CapitaFundingFactory Contract", function () {
         factory
           .connect(user1)
           .updateFeeWalletAddress(ethers.Wallet.createRandom().address)
-      ).to.be.revertedWithCustomError(factory, "Capita__NotOwner");
+      ).to.be.revertedWithCustomError(factory, "AccessControl__NotOwner");
+    });
+  });
+
+  describe("Delete Campaign", function () {
+    beforeEach(async function () {
+      // Set CapitaPoints address for tests
+      await factory
+        .connect(owner)
+        .setCapitaPointsAddress(await capitaPoints.getAddress());
+      const startTime = (await time.latest()) + 3600; // 1 hour from now
+      const endTime = startTime + 86400; // 1 day duration
+      const uri = "https://ipfs";
+      await factory
+        .connect(user1)
+        .createChainFundMe(startTime, endTime, uri, []);
+      await factory
+        .connect(user2)
+        .createChainFundMe(startTime, endTime, uri, []);
+    });
+    it("Should delete campaign by index", async () => {
+      await factory.deleteCampaignByIndex(0);
+      const addresses = await factory.getDeployedCampaigns();
+      expect(addresses[0]).to.equal(ethers.ZeroAddress);
+    });
+    it("Should delete campaign by address", async () => {
+      const addresses = await factory.getDeployedCampaigns();
+      await factory.deleteCampaignByAddress(addresses[1]);
+      expect(await factory.indexToDeployedCampaigns(1)).to.equal(
+        ethers.ZeroAddress
+      );
+    });
+
+    it("should allow only mods delete campaigns", async () => {
+      const addresses = await factory.getDeployedCampaigns();
+      const tx = factory.connect(user2).deleteCampaignByAddress(addresses[1]);
+      await expect(tx).to.be.revertedWithCustomError(
+        factory,
+        "CapitaFundingFactory__NotModerator"
+      );
+    });
+    it("should not delete if campaign not found", async () => {
+      const randAddr = ethers.Wallet.createRandom().address;
+      const tx = factory.deleteCampaignByAddress(randAddr);
+
+      await expect(tx)
+        .to.be.revertedWithCustomError(
+          factory,
+          "CapitaFundingFactory__InvalidAddress"
+        )
+        .withArgs(randAddr);
     });
   });
 

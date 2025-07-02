@@ -8,7 +8,10 @@ dotenv.config();
 const alchemyEndpointKey = process.env.ALCHEMY_ENDPOINT_KEY || "";
 const coinmarketcapAPIKey = process.env.COINMARKETCAP_API_KEY || "";
 const etherscanAPIKey = process.env.ETHERSCAN_API_KEY || "";
-const privateKey = process.env.PRIVATE_KEY || "";
+const privateKey =
+  process.env.PRODUCTION == "false"
+    ? process.env.SEPOLIA_PRIVATE_KEY
+    : process.env.PRIVATE_KEY;
 
 const settings = {
   optimizer: {
@@ -50,7 +53,7 @@ const config: HardhatUserConfig = {
 
     baseSepolia: {
       url: `https://base-sepolia.g.alchemy.com/v2/${alchemyEndpointKey}`,
-      gas: 5000000,
+      gas: 500000000,
       accounts: [privateKey],
     },
 

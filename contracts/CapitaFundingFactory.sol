@@ -26,6 +26,8 @@ contract CapitaFundingFactory is AccessControl {
     error CapitaFundingFactory__CapitaPointsAlreadySet();
     error CapitaFundingFactory__CampaignApproved(address);
     error CapitaFundingFactory__UnverifiedUser();
+    error CapitaFundingFactory__OnlyOwner();
+    error CapitaFundingFactory__InvalidIndexPassed();
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -33,7 +35,6 @@ contract CapitaFundingFactory is AccessControl {
 
     uint8 public platformFee = 5; // 5%. Enforced in ChainFundMe
     uint256 public deployedCampaignsCount;
-    uint256 public unverifiedFundLimit = 50000e18; // $50k
 
     address public priceFeedAddress;
 
@@ -42,11 +43,13 @@ contract CapitaFundingFactory is AccessControl {
     address public capitaTokenAddress;
     address public feeWalletAddress;
     bool public paused; // pause factory contract
-    bool public limitsEnabled = true; // Enforced in ChainFundMe
+    bool public limitsEnabled; // Enforced in ChainFundMe
 
     CapitaPoints public capitaPoints;
 
     mapping(uint256 => address) public indexToDeployedCampaigns; // Maps campaign ID to contract address
+    mapping(address => uint256) public deployedCampaignToIndex;
+
     mapping(address => bool) public moderators;
     mapping(address => address[]) private userCampaigns; // Tracks each user's chainFundMe contracts
     mapping(address => bool) public otherAcceptedTokensAddresses;
@@ -69,6 +72,8 @@ contract CapitaFundingFactory is AccessControl {
     event PlatformFeeUpdated(uint8 newFee);
     event AcceptableTokenSet(address indexed token, bool accepted);
     event UpdatedLimitsEnabled(bool indexed enabled);
+    event CampaignDeleted(address indexed deletedCampaign);
+
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
@@ -81,7 +86,7 @@ contract CapitaFundingFactory is AccessControl {
 
     modifier onlyCampaignOwner(address _campaignAddress) {
         if (msg.sender != ChainFundMe(_campaignAddress).owner()) {
-            revert AccessControl.Capita__NotOwner();
+            revert CapitaFundingFactory__OnlyOwner();
         }
         _;
     }
@@ -142,11 +147,6 @@ contract CapitaFundingFactory is AccessControl {
         if (address(capitaPoints) == address(0))
             revert CapitaFundingFactory__InvalidAddress(address(capitaPoints));
 
-        if (addressesLength > 0) {
-            if (!verifiedCreators[msg.sender])
-                revert CapitaFundingFactory__UnverifiedUser();
-        }
-
         if (startTime >= endTime || startTime < block.timestamp)
             revert CapitaFundingFactory__InvalidDatesSet();
 
@@ -174,9 +174,9 @@ contract CapitaFundingFactory is AccessControl {
             _otherTokenAddresses,
             address(this)
         );
-        indexToDeployedCampaigns[deployedCampaignsCount] = address(
-            chainFundMeClone
-        ); // Store campaign ID to contract address
+        indexToDeployedCampaigns[deployedCampaignsCount] = chainFundMeClone;
+        // Store campaign ID to contract address
+        deployedCampaignToIndex[chainFundMeClone] = deployedCampaignsCount;
         deployedCampaignsCount++;
         userCampaigns[msg.sender].push(address(chainFundMeClone)); // Store campaign for creator
 
@@ -332,9 +332,8 @@ contract CapitaFundingFactory is AccessControl {
     function updateFeeWalletAddress(
         address _feeWalletAddress
     ) external onlyOwner {
-        if (address(capitaPoints) != address(0)) {
-            revert CapitaFundingFactory__CapitaPointsAlreadySet();
-        }
+        if (_feeWalletAddress == address(0))
+            revert CapitaFundingFactory__InvalidAddress(address(0));
         feeWalletAddress = _feeWalletAddress;
         emit UpdatedFeeWalletAddress(_feeWalletAddress);
     }
@@ -350,7 +349,7 @@ contract CapitaFundingFactory is AccessControl {
         capitaTokenAddress = _capitaTokenAddress;
     }
 
-    function updateLimitsEnabled(bool _enabled) external onlyOwner {
+    function updateLimitsEnabled(bool _enabled) external onlyModerator {
         limitsEnabled = _enabled;
         emit UpdatedLimitsEnabled(_enabled);
     }
@@ -362,10 +361,24 @@ contract CapitaFundingFactory is AccessControl {
         verifiedCreators[_creator] = _verify;
     }
 
-    function updateUnverifiedFundingLimit(
-        uint256 _fundingLimit
-    ) external onlyOwner {
-        unverifiedFundLimit = _fundingLimit;
+    function deleteCampaignByIndex(uint256 index) external onlyModerator {
+        if (index > deployedCampaignsCount - 1)
+            revert CapitaFundingFactory__InvalidIndexPassed();
+        address campaignAddress = indexToDeployedCampaigns[index];
+        indexToDeployedCampaigns[index] = address(0);
+        emit CampaignDeleted(campaignAddress);
+    }
+
+    function deleteCampaignByAddress(
+        address _campaignAddress
+    ) external onlyModerator {
+        uint256 index = deployedCampaignToIndex[_campaignAddress];
+        address campaignAddress = indexToDeployedCampaigns[index];
+        if (_campaignAddress != campaignAddress) {
+            revert CapitaFundingFactory__InvalidAddress(_campaignAddress);
+        }
+        indexToDeployedCampaigns[index] = address(0);
+        emit CampaignDeleted(campaignAddress);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -238,6 +238,8 @@ contract CapitaPoints is AccessControl, ReentrancyGuard {
     function updateFundingFactoryAddress(
         address _newFactoryAddress
     ) external onlyOwner {
+        if (_newFactoryAddress == address(0))
+            revert CapitaPoints__InvalidAddress();
         fundingFactoryAddress = _newFactoryAddress;
         emit NewFundingFactoryAddress(_newFactoryAddress);
     }

@@ -6,7 +6,10 @@ export default buildModule("CapitaPoints", (m) => {
   const net = network.name as Networks;
   const priceFeedAddress = networks[net].priceFeedAddress;
 
-  const capitaFactoryData = getDeployedAddress(net, "capita-factory-mainnet");
+  const capitaFactoryData = getDeployedAddress(
+    net,
+    "capita-factory-baseSepolia"
+  );
 
   if (!capitaFactoryData) {
     throw new Error("CapitaFundingFactory not found");
