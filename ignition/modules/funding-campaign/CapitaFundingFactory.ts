@@ -1,12 +1,10 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-
 import { ethers, network } from "hardhat";
-
 import { Networks, networks, getDeployedAddress } from "../../../lib/config";
 
-export default buildModule("CapitaFundingFactory", (m) => {
+export default buildModule("CapitaFundingFactory", (m: any) => {
   const net = network.name as Networks;
-  const stableToken = networks[net].usdc;
+  const stableToken = networks[net].usdc || networks[net].usdt;
   const priceFeedAddress = networks[net].priceFeedAddress;
   console.log({ net });
 

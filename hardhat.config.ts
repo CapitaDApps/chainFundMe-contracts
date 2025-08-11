@@ -1,3 +1,4 @@
+import "ts-node/register";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ignition-ethers";
@@ -6,6 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const alchemyEndpointKey = process.env.ALCHEMY_ENDPOINT_KEY || "";
+const moralisEndpointKey = process.env.MORALIS_ENDPOINT_KEY || "";
 const coinmarketcapAPIKey = process.env.COINMARKETCAP_API_KEY || "";
 const etherscanAPIKey = process.env.ETHERSCAN_API_KEY || "";
 const privateKey = process.env.PRIVATE_KEY || "";
@@ -53,7 +55,46 @@ const config: HardhatUserConfig = {
       gas: 5000000,
       accounts: [privateKey],
     },
-
+    bnb: {
+      url: `https://bnb-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+      chainId: 56,
+    },
+    bnbTestnet: {
+      url: `https://bnb-testnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+      chainId: 97,
+    },
+    optimism: {
+      url: `https://opt-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+      chainId: 10,
+    },
+    optimismSepolia: {
+      url: `https://opt-sepolia.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+      chainId: 11155420,
+    },
+    celo: {
+      url: `https://celo-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+      chainId: 42220,
+    },
+    celoAlfajores: {
+      url: `https://celo-alfajores.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+      chainId: 44787,
+    },
+    lisk: {
+      url: "https://rpc.api.lisk.com",
+      accounts: [privateKey],
+      chainId: 1135,
+    },
+    liskSepolia: {
+      url: "https://rpc.sepolia-api.lisk.com",
+      accounts: [privateKey],
+      chainId: 4202,
+    },
     local: {
       url: "http://127.0.0.1:8545",
     },

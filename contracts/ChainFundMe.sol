@@ -185,26 +185,6 @@ contract ChainFundMe is Initializable {
             if (fundingDisapproved) revert ChainFundMe__FundingDisapproved();
         }
 
-        if (!verified) {
-            address priceFeedAddress = capitaFundingFactory.priceFeedAddress();
-            uint256 unverifiedFundLimit = capitaFundingFactory
-                .unverifiedFundLimit();
-            uint256 usdcBalance = IERC20(stableCoinAddress).balanceOf(
-                address(this)
-            ) * 1e12; // convert balance from 6 decimals to 18
-            uint256 ethToUsdBalance = address(this).balance.ethToUsd(
-                AggregatorV3Interface(priceFeedAddress)
-            );
-
-            if (_anotherToken != address(0)) {
-                usdcBalance += _amount * 1e12; // convert balance from 6 decimals to 18;
-            }
-
-            uint256 totalCurrentlyFunded = ethToUsdBalance + usdcBalance;
-            if (totalCurrentlyFunded > unverifiedFundLimit)
-                revert ChainFundMe__FundingLimitExceeded();
-        }
-
         address tokenUsedForFunding;
 
         if (_anotherToken != address(0)) {

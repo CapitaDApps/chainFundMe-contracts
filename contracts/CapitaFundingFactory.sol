@@ -142,10 +142,6 @@ contract CapitaFundingFactory is AccessControl {
         if (address(capitaPoints) == address(0))
             revert CapitaFundingFactory__InvalidAddress(address(capitaPoints));
 
-        if (addressesLength > 0) {
-            if (!verifiedCreators[msg.sender])
-                revert CapitaFundingFactory__UnverifiedUser();
-        }
 
         if (startTime >= endTime || startTime < block.timestamp)
             revert CapitaFundingFactory__InvalidDatesSet();

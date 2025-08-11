@@ -1,0 +1,20 @@
+{
+  "CapitaFundingFactory": {
+    "optimism": {
+      "mainnet": "",
+      "testnet": "0x6226aa7f1F2Ff53BA9eF99B259b054AF51a6bbD7"
+    },
+    "celo": {
+      "mainnet": "",
+      "testnet": "0x6226aa7f1F2Ff53BA9eF99B259b054AF51a6bbD7"
+    },
+    "bnb": {
+      "mainnet": "",
+      "testnet": ""
+    },
+    "lisk": {
+      "mainnet": "",
+      "testnet": "0x6226aa7f1F2Ff53BA9eF99B259b054AF51a6bbD7"
+    }
+  }
+}

@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
+    "noImplicitAny": false,
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": false,
-    "skipLibCheck": true,
+    "strict": true,
     "resolveJsonModule": true,
-    "noImplicitAny": false
-  }
+    "outDir": "dist"
+  },
+  "include": ["ignition", "scripts", "contracts", "lib"]
 }
