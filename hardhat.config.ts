@@ -10,7 +10,7 @@ const coinmarketcapAPIKey = process.env.COINMARKETCAP_API_KEY || "";
 const etherscanAPIKey = process.env.ETHERSCAN_API_KEY || "";
 const privateKey =
   process.env.PRODUCTION == "false"
-    ? process.env.SEPOLIA_PRIVATE_KEY
+    ? process.env.PRIVATE_KEY_2
     : process.env.PRIVATE_KEY;
 
 const settings = {
@@ -29,16 +29,17 @@ const config: HardhatUserConfig = {
       { version: "0.6.6", settings },
       { version: "0.8.0", settings },
       { version: "0.8.20", settings },
+      { version: "0.4.18", settings },
     ],
   },
 
   // defaultNetwork: "local",
   networks: {
-    // hardhat: {
-    //   forking: {
-    //     url: `https://base-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
-    //   },
-    // },
+    hardhat: {
+      forking: {
+        url: `https://base-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      },
+    },
 
     base: {
       url: `https://base-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
@@ -54,6 +55,16 @@ const config: HardhatUserConfig = {
     baseSepolia: {
       url: `https://base-sepolia.g.alchemy.com/v2/${alchemyEndpointKey}`,
       gas: 500000000,
+      accounts: [privateKey],
+    },
+
+    bnbTestnet: {
+      url: `https://bnb-testnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
+      accounts: [privateKey],
+    },
+
+    bnbMainnet: {
+      url: `https://bnb-mainnet.g.alchemy.com/v2/${alchemyEndpointKey}`,
       accounts: [privateKey],
     },
 
@@ -73,8 +84,10 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       sepolia: etherscanAPIKey,
-      baseSepolia: process.env.BASE_SEPOLIA_KEY,
-      base: process.env.BASE_SEPOLIA_KEY,
+      baseSepolia: process.env.BASESCAN_API_KEY,
+      base: process.env.BASESCAN_API_KEY,
+      bnbTestnet: process.env.BSCSCAN_API_KEY,
+      bnbMainnet: process.env.BSCSCAN_API_KEY,
     },
     customChains: [
       {
@@ -91,6 +104,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "bnbTestnet",
+        chainId: 97,
+        urls: {
+          apiURL: "https://api-testnet.bscscan.com/api",
+          browserURL: "https://testnet.bscscan.com",
+        },
+      },
+      {
+        network: "bnbMainnet",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com",
         },
       },
     ],

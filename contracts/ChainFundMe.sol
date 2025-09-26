@@ -50,7 +50,6 @@ contract ChainFundMe is Initializable {
     uint256 public endTime;
 
     bool public isWithdrawApproved;
-    bool public isWithdrawalPointsMinted;
     bool public withdrawalApprovalRevoked;
     bool public fundingApproved;
     bool public fundingDisapproved;
@@ -347,7 +346,12 @@ contract ChainFundMe is Initializable {
         }
     }
 
-    function endCampaign() external campaignStarted campaignNotOver onlyOwner {
+    function endCampaign()
+        external
+        campaignStarted
+        campaignNotOver
+        onlyFactory
+    {
         ended = true;
         endTime = block.timestamp;
         emit EndedCampaign(ended);
@@ -384,10 +388,6 @@ contract ChainFundMe is Initializable {
     function updateFundingDisapproval(bool disapproved) external onlyFactory {
         fundingDisapproved = disapproved;
         emit FundingDisapproved(disapproved);
-    }
-
-    function updateIsWithdrawalPointsMinted() external onlyFactory {
-        isWithdrawalPointsMinted = true;
     }
 
     /*//////////////////////////////////////////////////////////////

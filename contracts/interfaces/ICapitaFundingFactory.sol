@@ -15,8 +15,10 @@ interface ICapitaFundingFactory {
     error CapitaFundingFactory__ContractPaused();
     error CapitaFundingFactory__MaxOf5TokensExceeded();
     error CapitaFundingFactory__InvalidDatesSet();
-    error CapitaFundingFactory__CapitaPointsAlreadySet();
     error CapitaFundingFactory__CampaignApproved(address);
+    error CapitaFundingFactory__UnverifiedUser();
+    error CapitaFundingFactory__OnlyOwner();
+    error CapitaFundingFactory__InvalidIndexPassed();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -27,12 +29,22 @@ interface ICapitaFundingFactory {
     );
     event ModeratorAdded(address indexed moderator);
     event ModeratorRemoved(address indexed moderator);
-    event CapitaPointsAddressSet(address indexed capitaPointsAddress);
     event FeeWithdrawn(uint256 amount);
     event UpdatedFeeWalletAddress(address indexed _feeWalletAddress);
     event CapitaFactoryPaused(bool isPaused);
     event PlatformFeeUpdated(uint8 newFee);
     event AcceptableTokenSet(address indexed token, bool accepted);
+    event UpdatedLimitsEnabled(bool indexed enabled);
+    event CampaignDeleted(address indexed deletedCampaign);
+    event ChainFundMeFunded(
+        address indexed chainFundMeAddress,
+        address indexed otherToken,
+        uint256 amount
+    );
+    event ChainFundMeEnded(address indexed chainFundMeAddress);
+    event ChainFundMeAllFundsWithdrawn(address indexed chainFundMeAddress);
+    event ChainFundMeEthWithdrawn(address indexed chainFundMeAddress);
+    event ChainFundMeTokensWithdrawn(address indexed chainFundMeAddress);
 
     /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS
@@ -65,6 +77,8 @@ interface ICapitaFundingFactory {
 
     function priceFeedAddress() external view returns (address);
 
+    function getAddressByUri(string memory uri) external view returns (address);
+
     /*//////////////////////////////////////////////////////////////
                             MUTATIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -76,8 +90,6 @@ interface ICapitaFundingFactory {
     ) external;
 
     function removeModerator(address _moderator) external;
-
-    function setCapitaPointsAddress(address _capitaPointsAddress) external;
 
     function setAcceptableToken(address _tokenAddress) external;
 

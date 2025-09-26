@@ -3,11 +3,8 @@ import { getDeployedAddress, Networks } from "../lib/config";
 
 async function main() {
   const net = network.name as Networks;
-  const capitaPointsData = getDeployedAddress(net, "capita-points-baseSepolia");
-  const capitaFactoryData = getDeployedAddress(
-    net,
-    "capita-factory-baseSepolia"
-  );
+  const capitaPointsData = getDeployedAddress(net, "capita-points-mainnet-4");
+  const capitaFactoryData = getDeployedAddress(net, "capita-factory-mainnet-4");
 
   if (!capitaPointsData) {
     console.error("CapitaPoints not found");
@@ -22,9 +19,12 @@ async function main() {
     return;
   }
 
+  const factoryAddr =
+    capitaFactoryData["CapitaFundingFactory#CapitaFundingFactory"];
+
   const CapitaFundingFactory = await ethers.getContractAt(
     "CapitaFundingFactory",
-    capitaFactoryData["CapitaFundingFactory#CapitaFundingFactory"],
+    factoryAddr,
     owner
   );
 
@@ -36,7 +36,9 @@ async function main() {
 
   // Set the CapitaPoints address in the CapitaFundingFactory contract
   await CapitaFundingFactory.setCapitaPointsAddress(capitaPointsAddress);
-  console.log(`CapitaPoints address set to ${capitaPointsAddress}`);
+  console.log(
+    `CapitaPoints address set to ${capitaPointsAddress} on factory - ${factoryAddr}`
+  );
 }
 
 main().catch((error) => {

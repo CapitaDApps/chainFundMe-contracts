@@ -10,8 +10,8 @@ export default buildModule("CapitaFundingFactory", (m) => {
   const priceFeedAddress = networks[net].priceFeedAddress;
   console.log({ net });
 
-  const capitaTokenData = getDeployedAddress(net as Networks, "capita-token");
-
+  const capitaTokenData = getDeployedAddress("capita-token");
+  console.log(capitaTokenData);
   if (!stableToken) {
     throw new Error("Stable token address not found");
   }

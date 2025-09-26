@@ -1,6 +1,12 @@
 import fs from "fs";
 
-export type Networks = "base" | "sepolia" | "local" | "baseSepolia";
+export type Networks =
+  | "base"
+  | "sepolia"
+  | "local"
+  | "baseSepolia"
+  | "bnbTestnet"
+  | "bnbMainnet";
 
 type NetworkType = {
   [key in Networks]: {
@@ -26,9 +32,17 @@ export const networks: NetworkType = {
     priceFeedAddress: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
     usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   },
+  bnbTestnet: {
+    priceFeedAddress: "0x2514895c72f50D8bd4B4F9b1110F0D6bD2c97526",
+    usdc: "0x221c5b1a293aac1187ed3a7d7d2d9ad7fe1f3fb0",
+  },
+  bnbMainnet: {
+    priceFeedAddress: "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+    usdc: "0x55d398326f99059ff775485246999027b3197955",
+  },
 };
 
-export function getDeployedAddress(network: Networks, deploymentId: string) {
+export function getDeployedAddress(deploymentId: string) {
   try {
     const data = fs.readFileSync(
       `ignition/deployments/${deploymentId}/deployed_addresses.json`

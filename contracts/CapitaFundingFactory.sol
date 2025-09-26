@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ChainFundMe} from "./ChainFundMe.sol";
-import {CapitaPoints} from "./CapitaPoints.sol";
 import {AccessControl} from "./AccessControl.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract CapitaFundingFactory is AccessControl {
+contract CapitaFundingFactory is AccessControl, ReentrancyGuard {
     using Clones for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -23,11 +23,11 @@ contract CapitaFundingFactory is AccessControl {
     error CapitaFundingFactory__ContractPaused();
     error CapitaFundingFactory__MaxOf5TokensExceeded();
     error CapitaFundingFactory__InvalidDatesSet();
-    error CapitaFundingFactory__CapitaPointsAlreadySet();
     error CapitaFundingFactory__CampaignApproved(address);
     error CapitaFundingFactory__UnverifiedUser();
     error CapitaFundingFactory__OnlyOwner();
     error CapitaFundingFactory__InvalidIndexPassed();
+    error CapitaFundingFactory__UriAlreadyExists();
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -45,13 +45,12 @@ contract CapitaFundingFactory is AccessControl {
     bool public paused; // pause factory contract
     bool public limitsEnabled; // Enforced in ChainFundMe
 
-    CapitaPoints public capitaPoints;
-
     mapping(uint256 => address) public indexToDeployedCampaigns; // Maps campaign ID to contract address
     mapping(address => uint256) public deployedCampaignToIndex;
 
     mapping(address => bool) public moderators;
     mapping(address => address[]) private userCampaigns; // Tracks each user's chainFundMe contracts
+    mapping(string => address) private uriToChainFundMeAddress;
     mapping(address => bool) public otherAcceptedTokensAddresses;
     mapping(address => bool) public verifiedCreators;
 
@@ -65,7 +64,6 @@ contract CapitaFundingFactory is AccessControl {
     );
     event ModeratorAdded(address indexed moderator);
     event ModeratorRemoved(address indexed moderator);
-    event CapitaPointsAddressSet(address indexed capitaPointsAddress);
     event FeeWithdrawn(uint256 amount);
     event UpdatedFeeWalletAddress(address indexed _feeWalletAddress);
     event CapitaFactoryPaused(bool isPaused);
@@ -73,6 +71,16 @@ contract CapitaFundingFactory is AccessControl {
     event AcceptableTokenSet(address indexed token, bool accepted);
     event UpdatedLimitsEnabled(bool indexed enabled);
     event CampaignDeleted(address indexed deletedCampaign);
+    event ChainFundMeFunded(
+        address indexed sender,
+        address indexed chainFundMeAddress,
+        address indexed otherToken,
+        uint256 amount
+    );
+    event ChainFundMeEnded(address indexed chainFundMeAddress);
+    event ChainFundMeAllFundsWithdrawn(address indexed chainFundMeAddress);
+    event ChainFundMeEthWithdrawn(address indexed chainFundMeAddress);
+    event ChainFundMeTokensWithdrawn(address indexed chainFundMeAddress);
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -124,13 +132,6 @@ contract CapitaFundingFactory is AccessControl {
         emit ModeratorRemoved(_moderator);
     }
 
-    function setCapitaPointsAddress(
-        address _capitaPointsAddress
-    ) external onlyOwner {
-        capitaPoints = CapitaPoints(_capitaPointsAddress);
-        emit CapitaPointsAddressSet(_capitaPointsAddress);
-    }
-
     function createChainFundMe(
         uint256 startTime,
         uint256 endTime,
@@ -143,9 +144,6 @@ contract CapitaFundingFactory is AccessControl {
 
         if (addressesLength > 5)
             revert CapitaFundingFactory__MaxOf5TokensExceeded();
-
-        if (address(capitaPoints) == address(0))
-            revert CapitaFundingFactory__InvalidAddress(address(capitaPoints));
 
         if (startTime >= endTime || startTime < block.timestamp)
             revert CapitaFundingFactory__InvalidDatesSet();
@@ -161,6 +159,9 @@ contract CapitaFundingFactory is AccessControl {
                 );
             }
         }
+
+        if (getAddressByUri(_metadataUri) != address(0))
+            revert CapitaFundingFactory__UriAlreadyExists();
 
         address chainFundMeClone = chainFundMeImplementation.clone();
 
@@ -180,6 +181,8 @@ contract CapitaFundingFactory is AccessControl {
         deployedCampaignsCount++;
         userCampaigns[msg.sender].push(address(chainFundMeClone)); // Store campaign for creator
 
+        uriToChainFundMeAddress[_metadataUri] = chainFundMeClone;
+
         emit ChainFundMeCreated(msg.sender, address(chainFundMeClone));
     }
 
@@ -196,14 +199,7 @@ contract CapitaFundingFactory is AccessControl {
             sender
         );
 
-        if (_otherToken == stableCoinAddress) {
-            // mint points for the user
-            capitaPoints.mintPointsUSD(sender, _amount);
-        }
-        if (_otherToken == address(0)) {
-            // mint points for the user
-            capitaPoints.mintPointsETH(sender, value);
-        }
+        emit ChainFundMeFunded(sender, _campaignAddress, _otherToken, _amount);
     }
 
     function chainFundMe_approveWithdraw(
@@ -239,12 +235,9 @@ contract CapitaFundingFactory is AccessControl {
     ) external onlyModerator {
         ChainFundMe chainFundMe = ChainFundMe(_campaignAddress);
         bool approved = chainFundMe.fundingApproved();
-        address campaignOwner = chainFundMe.owner();
-        uint256 basePoints = capitaPoints.BASE_POINTS();
         if (approved)
             revert CapitaFundingFactory__CampaignApproved(_campaignAddress);
         chainFundMe.updateFundingApproval();
-        capitaPoints.mintPoints(campaignOwner, basePoints);
     }
 
     function chainFundMe_batchApproveFunding(
@@ -273,41 +266,35 @@ contract CapitaFundingFactory is AccessControl {
         }
     }
 
+    function chainFundMe_endCampaign(
+        address _campaignAddress
+    ) external onlyCampaignOwner(_campaignAddress) {
+        ChainFundMe(_campaignAddress).endCampaign();
+        emit ChainFundMeEnded(_campaignAddress);
+    }
+
     function chainFundMe_withdrawAllFunds(
         address _campaignAddress
     ) external onlyCampaignOwner(_campaignAddress) {
         chainFundMe_withdrawETH(_campaignAddress);
         chainFundMe_withdrawTokens(_campaignAddress);
+        emit ChainFundMeAllFundsWithdrawn(_campaignAddress);
     }
 
     function chainFundMe_withdrawETH(
         address _campaignAddress
-    ) public onlyCampaignOwner(_campaignAddress) {
+    ) public onlyCampaignOwner(_campaignAddress) nonReentrant {
         ChainFundMe chainFundMe = ChainFundMe(_campaignAddress);
-        address campaignOwner = chainFundMe.owner();
-        bool isMinted = chainFundMe.isWithdrawalPointsMinted();
-
         chainFundMe.withdrawETH();
-        if (!isMinted) {
-            chainFundMe.updateIsWithdrawalPointsMinted();
-            uint256 basePoints = capitaPoints.BASE_POINTS();
-            capitaPoints.mintPoints(campaignOwner, basePoints);
-        }
+        emit ChainFundMeEthWithdrawn(_campaignAddress);
     }
 
     function chainFundMe_withdrawTokens(
         address _campaignAddress
-    ) public onlyCampaignOwner(_campaignAddress) {
+    ) public onlyCampaignOwner(_campaignAddress) nonReentrant {
         ChainFundMe chainFundMe = ChainFundMe(_campaignAddress);
-        address campaignOwner = chainFundMe.owner();
-        bool isMinted = chainFundMe.isWithdrawalPointsMinted();
-
         chainFundMe.withdrawOtherTokens();
-        if (!isMinted) {
-            chainFundMe.updateIsWithdrawalPointsMinted();
-            uint256 basePoints = capitaPoints.BASE_POINTS();
-            capitaPoints.mintPoints(campaignOwner, basePoints);
-        }
+        emit ChainFundMeTokensWithdrawn(_campaignAddress);
     }
 
     function setAcceptableToken(address _tokenAddress) external onlyOwner {
@@ -406,11 +393,62 @@ contract CapitaFundingFactory is AccessControl {
         return userCampaigns[_user];
     }
 
-    function getDeployedCampaigns() external view returns (address[] memory) {
-        address[] memory campaigns = new address[](deployedCampaignsCount);
-        for (uint256 i = 0; i < deployedCampaignsCount; i++) {
-            campaigns[i] = indexToDeployedCampaigns[i];
+    struct DeployedCampaignStruct {
+        address campaign;
+        string uri;
+    }
+
+    function getDeployedCampaigns(
+        uint256 page,
+        uint256 numberPerPage
+    ) external view returns (DeployedCampaignStruct[] memory) {
+        numberPerPage = numberPerPage > deployedCampaignsCount
+            ? deployedCampaignsCount
+            : numberPerPage;
+
+        page = page < 1 ? 1 : page;
+
+        uint256 skip = (page - 1) * numberPerPage;
+
+        uint256 range = (numberPerPage * page) > deployedCampaignsCount
+            ? deployedCampaignsCount
+            : (numberPerPage * page);
+
+        uint256 remainder = deployedCampaignsCount % numberPerPage;
+        uint256 listSize = numberPerPage == deployedCampaignsCount
+            ? deployedCampaignsCount
+            : range == deployedCampaignsCount
+            ? remainder == 0 ? numberPerPage : remainder
+            : numberPerPage;
+
+        DeployedCampaignStruct[]
+            memory campaigns = new DeployedCampaignStruct[](listSize);
+
+        uint256 endIndex = numberPerPage;
+        uint256 startIndex = 0;
+
+        while (skip < range) {
+            uint256 backwardIndex = deployedCampaignsCount - 1 - skip;
+            address campAddr = indexToDeployedCampaigns[backwardIndex];
+
+            if (campAddr == address(0)) {
+                skip++;
+                range = range == deployedCampaignsCount
+                    ? deployedCampaignsCount
+                    : range + 1;
+                continue;
+            }
+            campaigns[startIndex] = DeployedCampaignStruct({
+                campaign: campAddr,
+                uri: ChainFundMe(campAddr).campaignMetadataUri()
+            });
+            startIndex = startIndex < endIndex ? startIndex + 1 : startIndex;
+            skip++;
         }
         return campaigns;
+    }
+
+    function getAddressByUri(string memory uri) public view returns (address) {
+        return uriToChainFundMeAddress[uri];
     }
 }

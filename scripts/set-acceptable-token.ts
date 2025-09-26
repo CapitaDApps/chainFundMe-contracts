@@ -3,9 +3,9 @@ import { getDeployedAddress, networks, Networks } from "../lib/config";
 
 async function main() {
   const net = network.name as Networks;
-  const capitaFactory = getDeployedAddress(net, "capita-factory-baseSepolia");
+  const capitaFactory = getDeployedAddress(net, "capita-factory-mainnet-4");
 
-  const token = "0xc3184FC54B029cfDF86D1Cc393EF9626Cbe270E5";
+  const token = "0x46C85152bFe9f96829aA94755D9f915F9B10EF5F";
 
   if (!capitaFactory) {
     console.error("CapitaFundingFactory contract not found");
